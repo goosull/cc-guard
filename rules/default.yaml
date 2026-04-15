@@ -1,0 +1,23 @@
+version: 1
+
+deny:
+  - pattern: "^rm -rf "
+    reason: "Recursive force delete"
+  - pattern: "^rm -r /"
+    reason: "Recursive delete from root"
+  - pattern: "git push --force"
+    reason: "Force push"
+  - pattern: "git push .* --force"
+    reason: "Force push (flag after remote)"
+  - pattern: "git reset --hard"
+    reason: "Hard reset"
+  - pattern: "^sudo "
+    reason: "Elevated privileges"
+  - pattern: "^chmod 777"
+    reason: "World-writable permissions"
+  - pattern: 'curl .* \| .*(bash|sh|zsh)'
+    reason: "Download and execute"
+  - pattern: 'wget .* -O- \| .*(bash|sh|zsh)'
+    reason: "Download and execute"
+
+allow: []

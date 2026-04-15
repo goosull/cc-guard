@@ -1,0 +1,18 @@
+{
+  "name": "cc-guard",
+  "version": "0.1.0",
+  "description": "Adaptive permission hook for Claude Code — regex-based deny/allow with session learning",
+  "type": "module",
+  "bin": {
+    "cc-guard": "./dist/cc-guard"
+  },
+  "scripts": {
+    "build": "bun build src/cli.ts --compile --outfile dist/cc-guard",
+    "test": "bun test",
+    "dev": "bun run src/cli.ts"
+  },
+  "dependencies": {
+    "yaml": "^2.7.0"
+  },
+  "license": "MIT"
+}
