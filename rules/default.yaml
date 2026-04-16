@@ -20,4 +20,33 @@ deny:
   - pattern: 'wget .* -O- \| .*(bash|sh|zsh)'
     reason: "Download and execute"
 
+  # File path rules (Read/Write/Edit/Glob/Grep)
+  - pattern: "\\.env$"
+    reason: "Environment file with secrets"
+    tools: ["Read", "Write", "Edit", "Glob", "Grep"]
+  - pattern: "(^|/)\\.env\\."
+    reason: "Environment file variant (.env.local, .env.production)"
+    tools: ["Read", "Write", "Edit", "Glob", "Grep"]
+  - pattern: "/etc/passwd"
+    reason: "System password file"
+    tools: ["Read", "Write", "Edit", "Glob", "Grep"]
+  - pattern: "/etc/shadow"
+    reason: "System shadow file"
+    tools: ["Read", "Write", "Edit", "Glob", "Grep"]
+  - pattern: "\\.ssh/"
+    reason: "SSH directory (keys, config)"
+    tools: ["Read", "Write", "Edit", "Glob", "Grep"]
+  - pattern: "\\.aws/credentials"
+    reason: "AWS credentials"
+    tools: ["Read", "Write", "Edit", "Glob", "Grep"]
+  - pattern: "\\.gnupg/"
+    reason: "GPG keys"
+    tools: ["Read", "Write", "Edit", "Glob", "Grep"]
+  - pattern: "(^|/)id_rsa($|\\.)"
+    reason: "SSH private key"
+    tools: ["Read", "Write", "Edit", "Glob", "Grep"]
+  - pattern: "(^|/)id_ed25519($|\\.)"
+    reason: "SSH private key (ed25519)"
+    tools: ["Read", "Write", "Edit", "Glob", "Grep"]
+
 allow: []

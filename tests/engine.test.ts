@@ -2,6 +2,7 @@ import { describe, it, expect } from "bun:test";
 import {
   evaluate,
   extractMatchTarget,
+  extractMatchTargets,
   normalizeInput,
   splitCompoundCommand,
 } from "../src/engine";
@@ -44,6 +45,152 @@ describe("extractMatchTarget", () => {
 
   it("falls back to JSON for unknown tools", () => {
     expect(extractMatchTarget("CustomTool", { foo: "bar" })).toBe('{"foo":"bar"}');
+  });
+});
+
+// === extractMatchTargets (multi-field) ===
+
+describe("extractMatchTargets", () => {
+  it("returns [command] for Bash", () => {
+    expect(extractMatchTargets("Bash", { command: "ls -la" })).toEqual(["ls -la"]);
+  });
+
+  it("returns [file_path] for Read", () => {
+    expect(extractMatchTargets("Read", { file_path: "/tmp/foo" })).toEqual(["/tmp/foo"]);
+  });
+
+  it("returns [file_path] for Write", () => {
+    expect(extractMatchTargets("Write", { file_path: "/tmp/bar" })).toEqual(["/tmp/bar"]);
+  });
+
+  it("returns [file_path] for Edit", () => {
+    expect(extractMatchTargets("Edit", { file_path: "/tmp/baz" })).toEqual(["/tmp/baz"]);
+  });
+
+  it("returns [pattern, path] for Glob with both fields", () => {
+    const targets = extractMatchTargets("Glob", { pattern: "**/*.ts", path: "/home/user" });
+    expect(targets).toEqual(["**/*.ts", "/home/user"]);
+  });
+
+  it("returns [pattern] for Glob with pattern only", () => {
+    expect(extractMatchTargets("Glob", { pattern: "*.env" })).toEqual(["*.env"]);
+  });
+
+  it("returns [pattern, path] for Grep with both fields", () => {
+    const targets = extractMatchTargets("Grep", { pattern: "password", path: "/etc" });
+    expect(targets).toEqual(["password", "/etc"]);
+  });
+
+  it("returns [skill] for Skill", () => {
+    expect(extractMatchTargets("Skill", { skill: "ship" })).toEqual(["ship"]);
+  });
+
+  it("returns [JSON] for unknown tool", () => {
+    expect(extractMatchTargets("Agent", { prompt: "hello" })).toEqual(['{"prompt":"hello"}']);
+  });
+
+  it("returns [JSON] for Glob with no pattern or path", () => {
+    const targets = extractMatchTargets("Glob", { something: "else" });
+    expect(targets).toEqual(['{"something":"else"}']);
+  });
+});
+
+// === tool-scoped rules ===
+
+describe("tool-scoped rules", () => {
+  it("file-path deny rule with tools scope does not match Bash", () => {
+    const rules: RulesConfig = {
+      version: 1,
+      deny: [{ pattern: "\\.env$", reason: "env file", tools: ["Read", "Write", "Edit"] }],
+      allow: [],
+    };
+    const result = evaluate(bashInput("cat .env"), rules);
+    expect(result.decision).not.toBe("deny");
+  });
+
+  it("file-path deny rule with tools scope matches Read", () => {
+    const rules: RulesConfig = {
+      version: 1,
+      deny: [{ pattern: "\\.env$", reason: "env file", tools: ["Read", "Write", "Edit"] }],
+      allow: [],
+    };
+    const input: HookInput = {
+      session_id: "test",
+      tool_name: "Read",
+      tool_input: { file_path: "/home/user/.env" },
+      cwd: "/tmp",
+      hook_event_name: "PreToolUse",
+    };
+    const result = evaluate(input, rules);
+    expect(result.decision).toBe("deny");
+  });
+
+  it("rule without tools field applies to all tools", () => {
+    const rules: RulesConfig = {
+      version: 1,
+      deny: [{ pattern: "/etc/passwd", reason: "system file" }],
+      allow: [],
+    };
+    const input: HookInput = {
+      session_id: "test",
+      tool_name: "Read",
+      tool_input: { file_path: "/etc/passwd" },
+      cwd: "/tmp",
+      hook_event_name: "PreToolUse",
+    };
+    const result = evaluate(input, rules);
+    expect(result.decision).toBe("deny");
+  });
+
+  it("Glob path field is checked against deny rules", () => {
+    const rules: RulesConfig = {
+      version: 1,
+      deny: [{ pattern: "\\.ssh/", reason: "SSH dir", tools: ["Glob", "Grep"] }],
+      allow: [],
+    };
+    const input: HookInput = {
+      session_id: "test",
+      tool_name: "Glob",
+      tool_input: { pattern: "*.ts", path: "/home/user/.ssh/" },
+      cwd: "/tmp",
+      hook_event_name: "PreToolUse",
+    };
+    const result = evaluate(input, rules);
+    expect(result.decision).toBe("deny");
+  });
+
+  it("Grep path field is checked against deny rules", () => {
+    const rules: RulesConfig = {
+      version: 1,
+      deny: [{ pattern: "/etc/shadow", reason: "shadow file" }],
+      allow: [],
+    };
+    const input: HookInput = {
+      session_id: "test",
+      tool_name: "Grep",
+      tool_input: { pattern: "root", path: "/etc/shadow" },
+      cwd: "/tmp",
+      hook_event_name: "PreToolUse",
+    };
+    const result = evaluate(input, rules);
+    expect(result.decision).toBe("deny");
+  });
+
+  it("Skill tool default-allows when no deny rule matches", () => {
+    const rules: RulesConfig = {
+      version: 1,
+      deny: [{ pattern: "^rm -rf ", reason: "dangerous" }],
+      allow: [],
+    };
+    const input: HookInput = {
+      session_id: "test",
+      tool_name: "Skill",
+      tool_input: { skill: "ship" },
+      cwd: "/tmp",
+      hook_event_name: "PreToolUse",
+    };
+    const result = evaluate(input, rules);
+    expect(result.decision).toBe("default-allow");
   });
 });
 

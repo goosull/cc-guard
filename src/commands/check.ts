@@ -34,6 +34,11 @@ export async function cmdCheck(): Promise<void> {
     inputStr = hookInput.tool_input.command;
   } else if (typeof hookInput.tool_input.file_path === "string") {
     inputStr = hookInput.tool_input.file_path;
+  } else if (typeof hookInput.tool_input.pattern === "string") {
+    const path = typeof hookInput.tool_input.path === "string" ? hookInput.tool_input.path : "";
+    inputStr = path ? `${hookInput.tool_input.pattern} (in ${path})` : hookInput.tool_input.pattern;
+  } else if (typeof hookInput.tool_input.skill === "string") {
+    inputStr = hookInput.tool_input.skill;
   } else {
     inputStr = JSON.stringify(hookInput.tool_input).slice(0, 500);
   }
