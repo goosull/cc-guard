@@ -249,7 +249,7 @@ Next session:
 | `cc-guard status` | Show rule counts and today's decision stats |
 | `cc-guard log [N]` | Show last N decisions with color-coded deny/allow |
 | `cc-guard import [path]` | Compress `settings.local.json` rules into YAML patterns |
-| `cc-guard learn` | Analyze session logs and suggest rule changes |
+| `cc-guard learn [--full]` | Analyze session logs and suggest rule changes |
 | `cc-guard diff` | Preview pending rule suggestions |
 | `cc-guard apply` | Accept pending suggestions into rules.yaml |
 | `cc-guard check` | Hook entry point (called by Claude Code, not you) |
