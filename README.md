@@ -280,20 +280,26 @@ src/
 ├── rules.ts            YAML loader + global/project merge
 ├── logger.ts           JSONL session logger
 ├── types.ts            Shared TypeScript types
+├── config.ts           Config file loader (~/.cc-guard/config.yaml)
+├── validator.ts        LLM suggestion validator (regex syntax, deny conflicts)
 └── commands/
     ├── check.ts        PreToolUse hook (stdin → decision → exit code)
     ├── init.ts         Setup ~/.cc-guard/ + register hook
     ├── status.ts       Rule & session statistics
     ├── log.ts          Decision history viewer
-    └── import.ts       settings.local.json → YAML migration
+    ├── import.ts       settings.local.json → YAML migration
+    ├── learn.ts        LLM-powered rule suggestion from session logs
+    ├── diff.ts         Preview pending rule suggestions
+    └── apply.ts        Accept suggestions into rules.yaml
 ```
 
 ## Roadmap
 
-- [ ] **LLM-powered rule learning** — Analyze session logs to suggest new deny/allow patterns
-- [ ] **Rule validation** — Catch regex errors and deny/allow conflicts before they bite
+- [x] **LLM-powered rule learning** — `cc-guard learn` analyzes session logs to suggest rules (v0.2.0)
+- [x] **Rule validation** — Regex syntax check + deny/allow conflict detection (v0.2.0)
 - [ ] **All-tool support** — Extend beyond Bash to Read, Write, Edit, MCP tools
 - [ ] **npm publish** — `npm install -g cc-guard` one-liner install
+- [ ] **Interactive deny** — Allow-once/allow-session for blocked commands
 
 ## Requirements
 
