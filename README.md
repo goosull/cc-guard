@@ -253,6 +253,42 @@ Next session:
 | `cc-guard diff` | Preview pending rule suggestions |
 | `cc-guard apply` | Accept pending suggestions into rules.yaml |
 | `cc-guard check` | Hook entry point (called by Claude Code, not you) |
+| `cc-guard allow-once <pat>` | Temporarily allow a denied pattern (1 use, 24h TTL) |
+| `cc-guard allow-session <pat>` | Allow a denied pattern for the session (24h TTL) |
+| `cc-guard allows` | List active temporary allows |
+| `cc-guard revoke <pat>` | Remove a temporary allow |
+| `cc-guard allow-clear` | Remove all temporary allows |
+
+## Interactive Deny
+
+When cc-guard blocks a command, the deny message includes the exact command to unblock it:
+
+```
+[cc-guard] BLOCKED: Hard reset (pattern: git reset --hard)
+  → Allow once:    cc-guard allow-once "git reset --hard"
+  → Allow session: cc-guard allow-session "git reset --hard"
+```
+
+**Claude Code can self-unblock.** Claude sees the deny message, runs `allow-once`, and retries. 3 seconds instead of 30.
+
+```bash
+# Allow a single use
+cc-guard allow-once "git reset --hard"
+
+# Allow for the rest of the session (24h TTL)
+cc-guard allow-session "git reset --hard"
+
+# See what's currently allowed
+cc-guard allows
+
+# Remove a specific allow
+cc-guard revoke "git reset --hard"
+
+# Remove all temporary allows
+cc-guard allow-clear
+```
+
+**Security:** All temporary allows auto-expire after 24 hours. `allow-once` entries are consumed after a single use. Temp-allows only override the specific deny pattern that was blocked, not the entire deny rule set.
 
 ## How cc-guard Compares
 
@@ -315,6 +351,7 @@ src/
 ├── logger.ts           JSONL session logger
 ├── types.ts            Shared TypeScript types
 ├── config.ts           Config file loader (~/.cc-guard/config.yaml)
+├── temp-allows.ts      Temporary allow manager (~/.cc-guard/temp-allows.json)
 ├── validator.ts        LLM suggestion validator (regex syntax, deny conflicts)
 └── commands/
     ├── check.ts        PreToolUse hook (stdin → decision → exit code)
@@ -324,7 +361,12 @@ src/
     ├── import.ts       settings.local.json → YAML migration
     ├── learn.ts        LLM-powered rule suggestion from session logs
     ├── diff.ts         Preview pending rule suggestions
-    └── apply.ts        Accept suggestions into rules.yaml
+    ├── apply.ts        Accept suggestions into rules.yaml
+    ├── allow-once.ts   Temp-allow a pattern for 1 use
+    ├── allow-session.ts Temp-allow a pattern for 24h
+    ├── allows.ts       List active temp-allows
+    ├── revoke.ts       Remove a temp-allow
+    └── allow-clear.ts  Remove all temp-allows
 ```
 
 ## Roadmap
@@ -333,7 +375,7 @@ src/
 - [x] **Rule validation** — Regex syntax check + deny/allow conflict detection (v0.2.0)
 - [ ] **All-tool support** — Extend beyond Bash to Read, Write, Edit, MCP tools
 - [ ] **npm publish** — `npm install -g cc-guard` one-liner install
-- [ ] **Interactive deny** — Allow-once/allow-session for blocked commands
+- [x] **Interactive deny** — Allow-once/allow-session for blocked commands
 
 ## Requirements
 

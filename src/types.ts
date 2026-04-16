@@ -33,7 +33,7 @@ export interface Decision {
   tool: string;
   input: string;
   decision: DecisionType;
-  source: "rule" | "default";
+  source: "rule" | "default" | "temp-allow";
   matched_pattern?: string;
   reason?: string;
 }
