@@ -115,16 +115,14 @@ describe("check command", () => {
     const input = JSON.stringify(makeHookInput({ tool_input: { command: "echo test" } }));
     await runCheck(input);
     const sessionsDir = join(testDir, "sessions");
-    if (existsSync(sessionsDir)) {
-      const date = new Date().toISOString().slice(0, 10);
-      const logFile = join(sessionsDir, `${date}.jsonl`);
-      if (existsSync(logFile)) {
-        const content = readFileSync(logFile, "utf-8").trim();
-        const decision = JSON.parse(content);
-        expect(decision.tool).toBe("Bash");
-        expect(decision.input).toBe("echo test");
-      }
-    }
+    expect(existsSync(sessionsDir)).toBe(true);
+    const date = new Date().toISOString().slice(0, 10);
+    const logFile = join(sessionsDir, `${date}.jsonl`);
+    expect(existsSync(logFile)).toBe(true);
+    const lines = readFileSync(logFile, "utf-8").trim().split("\n");
+    const decision = JSON.parse(lines[0]);
+    expect(decision.tool).toBe("Bash");
+    expect(decision.input).toBe("echo test");
   });
 
   it("stderr on deny contains blocked reason", async () => {
