@@ -1,0 +1,26 @@
+name: Feature Request
+description: Suggest a new feature for cc-guard
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: "Describe the problem or frustration this feature addresses"
+      placeholder: "I find myself manually editing rules.yaml every time..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: "How would you like this to work?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: "Any workarounds or other approaches you've thought about?"

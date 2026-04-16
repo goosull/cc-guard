@@ -1,6 +1,7 @@
 <p align="center">
   <br />
-  <img src="https://img.shields.io/badge/cc--guard-v0.1.0-blue?style=for-the-badge" alt="cc-guard v0.1.0" />
+  <a href="https://github.com/goosull/cc-guard/actions/workflows/ci.yml"><img src="https://github.com/goosull/cc-guard/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/goosull/cc-guard/releases/latest"><img src="https://img.shields.io/github/v/release/goosull/cc-guard?style=for-the-badge&color=blue" alt="Latest Release" /></a>
   <img src="https://img.shields.io/badge/runtime-bun-f472b6?style=for-the-badge&logo=bun" alt="Bun" />
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License" />
   <br />

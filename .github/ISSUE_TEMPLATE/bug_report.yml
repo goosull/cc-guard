@@ -1,0 +1,60 @@
+name: Bug Report
+description: Report a bug in cc-guard
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please fill in the details below.
+
+  - type: input
+    id: version
+    attributes:
+      label: cc-guard version
+      description: "Run `cc-guard --version` or check package.json"
+      placeholder: "0.2.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux (x64)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly
+      placeholder: "cc-guard blocked a command that should have been allowed..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      placeholder: "The command should have been allowed because..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: rules
+    attributes:
+      label: "rules.yaml (relevant section)"
+      description: "Paste your deny/allow rules if relevant"
+      render: yaml
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "cc-guard log output"
+      description: "Run `cc-guard log 10` and paste the output"
+      render: text
