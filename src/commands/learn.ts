@@ -6,7 +6,7 @@ import { loadConfig } from "../config";
 import { validateSuggestions, type RuleSuggestion } from "../validator";
 import type { Decision } from "../types";
 
-function loadAllDecisions(): Decision[] {
+export function loadAllDecisions(): Decision[] {
   const sessionsDir = join(getCcGuardDir(), "sessions");
   const decisions: Decision[] = [];
 
@@ -41,7 +41,7 @@ function loadAllDecisions(): Decision[] {
   return decisions;
 }
 
-function buildStats(decisions: Decision[]) {
+export function buildStats(decisions: Decision[]) {
   const allowed = decisions.filter((d) => d.decision === "allow" || d.decision === "default-allow");
   const denied = decisions.filter((d) => d.decision === "deny");
   const defaultAllowed = decisions.filter((d) => d.decision === "default-allow");
@@ -66,7 +66,7 @@ function buildStats(decisions: Decision[]) {
   };
 }
 
-function buildPrompt(decisions: Decision[], currentRulesYaml: string, stats: ReturnType<typeof buildStats>): string {
+export function buildPrompt(decisions: Decision[], currentRulesYaml: string, stats: ReturnType<typeof buildStats>): string {
   const sample = decisions.slice(0, 100);
 
   return `You are analyzing Claude Code permission decisions to suggest rule improvements for cc-guard, a regex-based permission guard.
@@ -111,7 +111,7 @@ Respond with ONLY a JSON array of suggestions, no other text:
 ]`;
 }
 
-function parseLlmResponse(text: string): RuleSuggestion[] {
+export function parseLlmResponse(text: string): RuleSuggestion[] {
   const jsonMatch = text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) return [];
 

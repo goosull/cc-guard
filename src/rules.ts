@@ -3,13 +3,15 @@ import { join } from "path";
 import { homedir } from "os";
 import type { RulesConfig } from "./types";
 
-const CC_GUARD_DIR = join(homedir(), ".cc-guard");
+export function getCcGuardDir(): string {
+  return process.env.CC_GUARD_DIR ?? join(homedir(), ".cc-guard");
+}
 
 function emptyRules(): RulesConfig {
   return { version: 1, deny: [], allow: [] };
 }
 
-function parseRulesFile(content: string): RulesConfig {
+export function parseRulesFile(content: string): RulesConfig {
   const parsed = parse(content);
   if (!parsed || typeof parsed !== "object") return emptyRules();
   return {
@@ -21,7 +23,7 @@ function parseRulesFile(content: string): RulesConfig {
 
 export async function loadRules(projectSlug?: string): Promise<RulesConfig> {
   // Load global rules
-  const globalPath = join(CC_GUARD_DIR, "rules.yaml");
+  const globalPath = join(getCcGuardDir(), "rules.yaml");
   let global = emptyRules();
   try {
     const content = await Bun.file(globalPath).text();
@@ -32,7 +34,7 @@ export async function loadRules(projectSlug?: string): Promise<RulesConfig> {
 
   // Load project overlay if available
   if (projectSlug) {
-    const projectPath = join(CC_GUARD_DIR, "projects", `${projectSlug}.yaml`);
+    const projectPath = join(getCcGuardDir(), "projects", `${projectSlug}.yaml`);
     try {
       const content = await Bun.file(projectPath).text();
       const project = parseRulesFile(content);
@@ -48,9 +50,5 @@ export async function loadRules(projectSlug?: string): Promise<RulesConfig> {
 }
 
 export function getDefaultRulesPath(): string {
-  return join(CC_GUARD_DIR, "rules.yaml");
-}
-
-export function getCcGuardDir(): string {
-  return CC_GUARD_DIR;
+  return join(getCcGuardDir(), "rules.yaml");
 }
