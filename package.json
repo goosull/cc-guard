@@ -1,6 +1,6 @@
 {
   "name": "cc-guard",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Adaptive permission hook for Claude Code — regex-based deny/allow with session learning",
   "type": "module",
   "bin": {

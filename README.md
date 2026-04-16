@@ -182,14 +182,42 @@ allow:
 
 **Project-specific rules** go in `~/.cc-guard/projects/{name}.yaml` and merge with global rules. Deny rules are always the union — a project can add deny rules but never remove global ones.
 
+## Auto-Learning
+
+cc-guard learns from your usage **automatically**. Every time a Claude Code session ends, it analyzes your decision history and suggests new rules.
+
+```
+Session ends
+     │
+     ▼
+SessionEnd hook fires
+     │
+     ▼
+cc-guard learn --auto
+     │
+     ├── Reads session logs (JSONL)
+     ├── Calls Claude CLI (your existing login — no API key needed)
+     ├── Validates suggestions (regex syntax, deny conflicts, back-testing)
+     └── Saves to ~/.cc-guard/pending-rules.yaml
+     
+Next session:
+     $ cc-guard diff     ← review suggestions
+     $ cc-guard apply    ← accept good ones
+```
+
+**Zero config.** Uses your existing Claude Code login via `claude -p`. No API key, no billing setup. Falls back to Anthropic SDK if the CLI is unavailable.
+
 ## CLI Reference
 
 | Command | Description |
 |:--------|:------------|
-| `cc-guard init` | Create `~/.cc-guard/`, copy default rules, register hook |
+| `cc-guard init` | Create `~/.cc-guard/`, copy default rules, register hooks |
 | `cc-guard status` | Show rule counts and today's decision stats |
 | `cc-guard log [N]` | Show last N decisions with color-coded deny/allow |
 | `cc-guard import [path]` | Compress `settings.local.json` rules into YAML patterns |
+| `cc-guard learn` | Analyze session logs and suggest rule changes |
+| `cc-guard diff` | Preview pending rule suggestions |
+| `cc-guard apply` | Accept pending suggestions into rules.yaml |
 | `cc-guard check` | Hook entry point (called by Claude Code, not you) |
 
 ## How cc-guard Compares
@@ -201,6 +229,7 @@ allow:
 | Config format | YAML | JSON (settings.json) | TOML | settings.json |
 | Rule migration | `cc-guard import` | Manual | Manual | N/A |
 | Session logging | JSONL per day | No | Audit log | No |
+| Auto-learning | LLM-powered (Claude CLI) | No | No | No |
 | Runtime | Bun (single binary) | Built-in | Rust | Python |
 | Latency | < 20ms | 0ms | < 5ms | ~50ms |
 
