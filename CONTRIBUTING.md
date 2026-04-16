@@ -5,6 +5,7 @@ Thanks for your interest in contributing!
 ## Prerequisites
 
 - [Bun](https://bun.sh/) v1.0+
+- [Claude Code](https://code.claude.com/) (for testing hooks integration)
 
 ## Setup
 
@@ -27,15 +28,48 @@ bun run build
 bun run src/cli.ts status
 ```
 
-## Making changes
+## Workflow
 
-1. Fork the repo and create a branch from `main`
-2. Make your changes
-3. Add or update tests for any new functionality
-4. Run `bun test` — all tests must pass
-5. Run `bun run build` — binary must compile
-6. Update `CHANGELOG.md` if your change is user-facing
-7. Open a PR
+We use a **PR-based workflow**. The `main` branch is protected — all changes go through pull requests.
+
+```
+1. Fork the repo (or create a branch if you have write access)
+2. Create a feature branch: git checkout -b feat/my-feature
+3. Make your changes
+4. Add or update tests
+5. Run: bun test && bun run build
+6. Update CHANGELOG.md if user-facing
+7. Push and open a PR against main
+8. CI runs automatically (test + build must pass)
+9. Merge after CI passes
+```
+
+### Branch naming
+
+- `feat/description` — new features
+- `fix/description` — bug fixes
+- `docs/description` — documentation changes
+- `chore/description` — maintenance, CI, deps
+
+### Commit messages
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+feat: add new deny rule for SQL injection
+fix: handle escaped quotes in compound commands
+docs: update README with auto-learn docs
+chore: update CI workflow
+```
+
+### Releases
+
+Releases are automated via GitHub Actions:
+
+1. Update `CHANGELOG.md` and bump version in `package.json`
+2. Merge the PR to `main`
+3. Tag the merge commit: `git tag v0.X.0 && git push origin v0.X.0`
+4. GitHub Actions builds cross-platform binaries and creates a GitHub Release
 
 ## Code style
 
