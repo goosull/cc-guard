@@ -2,6 +2,19 @@
 
 All notable changes to cc-guard are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.3.1] - 2026-04-16
+
+### Added
+- Test coverage expansion: 6 new test files (config, rules, validator, logger, check, learn)
+- 74 new tests bringing total from 31 to 105 across 7 test files
+- Integration tests for check command via subprocess (Bun.spawn with stdin/exit code)
+- Validator edge case tests: deny conflict heuristic limits, remove_allow bypass, exception paths
+
+### Changed
+- `getCcGuardDir()` now reads `CC_GUARD_DIR` env var dynamically (enables test isolation)
+- Exported `parseRulesFile()` from rules.ts for direct testing
+- Exported `parseLlmResponse()`, `buildStats()`, `buildPrompt()`, `loadAllDecisions()` from learn.ts
+
 ## [0.3.0] - 2026-04-16
 
 ### Added
