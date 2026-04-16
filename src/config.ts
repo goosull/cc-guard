@@ -21,7 +21,7 @@ const defaults: CcGuardConfig = {
     api_key_env: "ANTHROPIC_API_KEY",
   },
   learning: {
-    min_sessions: 3,
+    min_sessions: 0,
     confidence_threshold: "medium",
   },
 };

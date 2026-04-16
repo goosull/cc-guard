@@ -15,7 +15,7 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
   status: () => cmdStatus(),
   log: (a) => cmdLog(a),
   import: (a) => cmdImport(a),
-  learn: () => cmdLearn(),
+  learn: (a) => cmdLearn(a),
   diff: () => cmdDiff(),
   apply: () => cmdApply(),
 };

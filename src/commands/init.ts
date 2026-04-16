@@ -57,13 +57,16 @@ export async function cmdInit(): Promise<void> {
     writeFileSync(
       configPath,
       `# cc-guard configuration
+# LLM is used only for "cc-guard learn" — never at runtime.
+# Primary: Claude CLI (uses your existing Claude Code login, no API key needed)
+# Fallback: Anthropic SDK (requires ANTHROPIC_API_KEY env var)
 llm:
   provider: "claude"
   model: "claude-sonnet-4-6"
   api_key_env: "ANTHROPIC_API_KEY"
 
 learning:
-  min_sessions: 3
+  min_sessions: 0
   confidence_threshold: "medium"
 
 hooks:
@@ -97,32 +100,53 @@ function registerHook(settingsPath: string): void {
     hooks?: Array<{ type?: string; command?: string }>;
   }>;
 
-  // Check if already registered
-  const alreadyRegistered = preToolUse.some((entry) =>
+  // Check if PreToolUse already registered
+  const preToolRegistered = preToolUse.some((entry) =>
     entry.hooks?.some((h) => h.command?.includes("cc-guard"))
   );
 
-  if (alreadyRegistered) {
-    console.log("Hook already registered in settings.json");
-    return;
+  if (!preToolRegistered) {
+    preToolUse.push({
+      matcher: "Bash",
+      hooks: [
+        {
+          type: "command",
+          command: "cc-guard check",
+        },
+      ],
+    });
+    hooks.PreToolUse = preToolUse;
+    console.log("Registered PreToolUse hook");
+  } else {
+    console.log("PreToolUse hook already registered");
   }
 
-  // Phase 1: Bash only. Phase 2 will support matcher: "*" for all tools.
-  // engine.ts already handles Read/Write/Edit/Glob extraction — they'll work
-  // once the matcher is expanded.
-  preToolUse.push({
-    matcher: "Bash",
-    hooks: [
-      {
-        type: "command",
-        command: "cc-guard check",
-      },
-    ],
-  });
+  // Register SessionEnd hook for auto-learning
+  const sessionEnd = (hooks.SessionEnd ?? []) as Array<{
+    hooks?: Array<{ type?: string; command?: string }>;
+  }>;
 
-  hooks.PreToolUse = preToolUse;
+  const sessionEndRegistered = sessionEnd.some((entry) =>
+    entry.hooks?.some((h) => h.command?.includes("cc-guard"))
+  );
+
+  if (!sessionEndRegistered) {
+    sessionEnd.push({
+      hooks: [
+        {
+          type: "command",
+          command: "cc-guard learn --auto",
+        },
+      ],
+    });
+    hooks.SessionEnd = sessionEnd;
+    console.log("Registered SessionEnd hook (auto-learn)");
+  } else {
+    console.log("SessionEnd hook already registered");
+  }
+
   settings.hooks = hooks;
 
   writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
-  console.log(`Registered hook in ${settingsPath}`);
+  console.log(`Updated ${settingsPath}`);
 }
