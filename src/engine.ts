@@ -1,19 +1,37 @@
 import type { Rule, HookInput, EngineResult, RulesConfig } from "./types";
 
 /**
- * Extract the string to match against from tool input.
+ * Extract all strings to match against from tool input.
+ * Returns an array because some tools have multiple matchable fields
+ * (e.g., Glob/Grep have both `pattern` and `path`).
  */
-export function extractMatchTarget(toolName: string, toolInput: Record<string, unknown>): string {
+export function extractMatchTargets(toolName: string, toolInput: Record<string, unknown>): string[] {
   if (toolName === "Bash" && typeof toolInput.command === "string") {
-    return toolInput.command;
+    return [toolInput.command];
   }
   if (
-    ["Read", "Write", "Edit", "Glob"].includes(toolName) &&
+    ["Read", "Write", "Edit"].includes(toolName) &&
     typeof toolInput.file_path === "string"
   ) {
-    return toolInput.file_path;
+    return [toolInput.file_path];
   }
-  return JSON.stringify(toolInput);
+  if (toolName === "Glob" || toolName === "Grep") {
+    const targets: string[] = [];
+    if (typeof toolInput.pattern === "string") targets.push(toolInput.pattern);
+    if (typeof toolInput.path === "string") targets.push(toolInput.path);
+    return targets.length > 0 ? targets : [JSON.stringify(toolInput)];
+  }
+  if (toolName === "Skill" && typeof toolInput.skill === "string") {
+    return [toolInput.skill];
+  }
+  return [JSON.stringify(toolInput)];
+}
+
+/**
+ * Backward-compat wrapper — returns the first match target.
+ */
+export function extractMatchTarget(toolName: string, toolInput: Record<string, unknown>): string {
+  return extractMatchTargets(toolName, toolInput)[0];
 }
 
 /**
@@ -134,12 +152,22 @@ function testPattern(pattern: string, input: string): boolean | null {
 
 /**
  * Check a single input string against rules.
+ * If toolName is provided, rules with a `tools` array are filtered to only
+ * apply when the tool is in the list. Rules without `tools` apply to all tools.
  */
-function checkSingle(input: string, rules: RulesConfig): EngineResult {
+function checkSingle(input: string, rules: RulesConfig, toolName?: string): EngineResult {
   const normalized = normalizeInput(input);
 
+  // Filter rules by tool scope
+  const applicableDeny = toolName
+    ? rules.deny.filter(r => !r.tools || r.tools.includes(toolName))
+    : rules.deny;
+  const applicableAllow = toolName
+    ? rules.allow.filter(r => !r.tools || r.tools.includes(toolName))
+    : rules.allow;
+
   // Deny rules first (highest priority)
-  for (const rule of rules.deny) {
+  for (const rule of applicableDeny) {
     const match = testPattern(rule.pattern, normalized);
     if (match === true) {
       return {
@@ -151,7 +179,7 @@ function checkSingle(input: string, rules: RulesConfig): EngineResult {
   }
 
   // Allow rules
-  for (const rule of rules.allow) {
+  for (const rule of applicableAllow) {
     const match = testPattern(rule.pattern, normalized);
     if (match === true) {
       return {
@@ -169,18 +197,21 @@ function checkSingle(input: string, rules: RulesConfig): EngineResult {
  * Main engine: evaluate a tool call against rules.
  * For Bash commands, splits compound commands and checks each segment.
  * ANY segment matching deny → whole command denied.
+ * For multi-field tools (Glob/Grep), ANY field matching deny → denied.
  */
 export function evaluate(
   hookInput: HookInput,
   rules: RulesConfig
 ): EngineResult {
-  const target = extractMatchTarget(hookInput.tool_name, hookInput.tool_input);
+  const toolName = hookInput.tool_name;
+  const targets = extractMatchTargets(toolName, hookInput.tool_input);
 
   // For Bash, check the full command first (catches patterns like "curl.*|.*bash"),
   // then split compound commands and check each segment individually.
-  if (hookInput.tool_name === "Bash") {
+  if (toolName === "Bash") {
+    const target = targets[0];
     // Phase 1: Check full unsplit command (for patterns that span operators like pipe)
-    const fullResult = checkSingle(target, rules);
+    const fullResult = checkSingle(target, rules, toolName);
     if (fullResult.decision === "deny") {
       return fullResult;
     }
@@ -189,7 +220,7 @@ export function evaluate(
     const segments = splitCompoundCommand(target);
 
     for (const segment of segments) {
-      const result = checkSingle(segment, rules);
+      const result = checkSingle(segment, rules, toolName);
       if (result.decision === "deny") {
         return {
           ...result,
@@ -205,7 +236,7 @@ export function evaluate(
 
     // Phase 4: Check segments for allow
     for (const segment of segments) {
-      const result = checkSingle(segment, rules);
+      const result = checkSingle(segment, rules, toolName);
       if (result.decision === "allow") {
         return result;
       }
@@ -214,6 +245,21 @@ export function evaluate(
     return { decision: "default-allow" };
   }
 
-  // Non-Bash tools: check directly
-  return checkSingle(target, rules);
+  // Non-Bash tools: check each target — ANY deny → denied
+  for (const target of targets) {
+    const result = checkSingle(target, rules, toolName);
+    if (result.decision === "deny") {
+      return result;
+    }
+  }
+
+  // Check for allow matches
+  for (const target of targets) {
+    const result = checkSingle(target, rules, toolName);
+    if (result.decision === "allow") {
+      return result;
+    }
+  }
+
+  return { decision: "default-allow" };
 }

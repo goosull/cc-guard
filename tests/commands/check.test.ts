@@ -22,6 +22,15 @@ deny:
     reason: "Hard reset"
   - pattern: "^sudo "
     reason: "Elevated privileges"
+  - pattern: "\\\\.env$"
+    reason: "Environment file with secrets"
+    tools: ["Read", "Write", "Edit", "Glob", "Grep"]
+  - pattern: "/etc/passwd"
+    reason: "System password file"
+    tools: ["Read", "Write", "Edit", "Glob", "Grep"]
+  - pattern: "\\\\.ssh/"
+    reason: "SSH directory"
+    tools: ["Read", "Write", "Edit", "Glob", "Grep"]
 allow:
   - pattern: "^git "
   - pattern: "^echo "
@@ -138,5 +147,50 @@ describe("check command", () => {
     const output = JSON.parse(stdout);
     expect(output.hookSpecificOutput).toBeDefined();
     expect(output.hookSpecificOutput.permissionDecision).toBe("allow");
+  });
+
+  // === All-tool support tests ===
+
+  it("denies Read of .env file with exit code 2", async () => {
+    const input = JSON.stringify(
+      makeHookInput({ tool_name: "Read", tool_input: { file_path: "/home/user/.env" } }),
+    );
+    const { exitCode, stderr } = await runCheck(input);
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain("Environment file");
+  });
+
+  it("denies Write to /etc/passwd with exit code 2", async () => {
+    const input = JSON.stringify(
+      makeHookInput({ tool_name: "Write", tool_input: { file_path: "/etc/passwd" } }),
+    );
+    const { exitCode, stderr } = await runCheck(input);
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain("System password file");
+  });
+
+  it("allows Read of normal file with exit code 0", async () => {
+    const input = JSON.stringify(
+      makeHookInput({ tool_name: "Read", tool_input: { file_path: "src/index.ts" } }),
+    );
+    const { exitCode } = await runCheck(input);
+    expect(exitCode).toBe(0);
+  });
+
+  it("default-allows Skill tool with exit code 0", async () => {
+    const input = JSON.stringify(
+      makeHookInput({ tool_name: "Skill", tool_input: { skill: "ship" } }),
+    );
+    const { exitCode } = await runCheck(input);
+    expect(exitCode).toBe(0);
+  });
+
+  it("tool-scoped .env rule does not block Bash cat .env command", async () => {
+    const input = JSON.stringify(
+      makeHookInput({ tool_name: "Bash", tool_input: { command: "cat .env" } }),
+    );
+    const { exitCode } = await runCheck(input);
+    // .env deny rule has tools:["Read","Write","Edit","Glob","Grep"], not Bash
+    expect(exitCode).toBe(0);
   });
 });

@@ -1,6 +1,7 @@
 export interface Rule {
   pattern: string;
   reason?: string;
+  tools?: string[];
   source?: "manual" | "auto-learned" | "project-context" | "imported";
   learned_at?: string;
 }

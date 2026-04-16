@@ -29,6 +29,7 @@ export async function cmdInit(): Promise<void> {
     } else {
       // Inline default rules if bundled binary can't find the file
       const { stringify } = await import("yaml");
+      const FILE_TOOLS = ["Read", "Write", "Edit", "Glob", "Grep"];
       const defaultRules = {
         version: 1,
         deny: [
@@ -41,6 +42,15 @@ export async function cmdInit(): Promise<void> {
           { pattern: "^chmod 777", reason: "World-writable permissions" },
           { pattern: "curl .* \\| .*(bash|sh|zsh)", reason: "Download and execute" },
           { pattern: "wget .* -O- \\| .*(bash|sh|zsh)", reason: "Download and execute" },
+          { pattern: "\\.env$", reason: "Environment file with secrets", tools: FILE_TOOLS },
+          { pattern: "(^|/)\\.env\\.", reason: "Environment file variant", tools: FILE_TOOLS },
+          { pattern: "/etc/passwd", reason: "System password file", tools: FILE_TOOLS },
+          { pattern: "/etc/shadow", reason: "System shadow file", tools: FILE_TOOLS },
+          { pattern: "\\.ssh/", reason: "SSH directory (keys, config)", tools: FILE_TOOLS },
+          { pattern: "\\.aws/credentials", reason: "AWS credentials", tools: FILE_TOOLS },
+          { pattern: "\\.gnupg/", reason: "GPG keys", tools: FILE_TOOLS },
+          { pattern: "(^|/)id_rsa($|\\.)", reason: "SSH private key", tools: FILE_TOOLS },
+          { pattern: "(^|/)id_ed25519($|\\.)", reason: "SSH private key (ed25519)", tools: FILE_TOOLS },
         ],
         allow: [],
       };
@@ -70,7 +80,7 @@ learning:
   confidence_threshold: "medium"
 
 hooks:
-  tool_scope: "Bash"
+  tool_scope: "Bash,Read,Write,Edit,Glob,Grep,Skill"
 `
     );
     console.log(`Created config at ${configPath}`);
@@ -81,6 +91,8 @@ hooks:
 
   console.log("\ncc-guard initialized! Run 'cc-guard status' to verify.");
 }
+
+const SUPPORTED_TOOLS = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "Skill"];
 
 function registerHook(settingsPath: string): void {
   let settings: Record<string, unknown> = {};
@@ -100,25 +112,37 @@ function registerHook(settingsPath: string): void {
     hooks?: Array<{ type?: string; command?: string }>;
   }>;
 
-  // Check if PreToolUse already registered
-  const preToolRegistered = preToolUse.some((entry) =>
-    entry.hooks?.some((h) => h.command?.includes("cc-guard"))
+  // Find which tools already have cc-guard registered
+  const registeredTools = new Set(
+    preToolUse
+      .filter((e) => e.hooks?.some((h) => h.command?.includes("cc-guard")))
+      .map((e) => e.matcher)
+      .filter(Boolean)
   );
 
-  if (!preToolRegistered) {
-    preToolUse.push({
-      matcher: "Bash",
-      hooks: [
-        {
-          type: "command",
-          command: "cc-guard check",
-        },
-      ],
-    });
+  // Add missing tools
+  const missingTools = SUPPORTED_TOOLS.filter((t) => !registeredTools.has(t));
+
+  if (missingTools.length > 0) {
+    for (const tool of missingTools) {
+      preToolUse.push({
+        matcher: tool,
+        hooks: [
+          {
+            type: "command",
+            command: "cc-guard check",
+          },
+        ],
+      });
+    }
     hooks.PreToolUse = preToolUse;
-    console.log("Registered PreToolUse hook");
+    if (registeredTools.size === 0) {
+      console.log(`Registered PreToolUse hooks for ${SUPPORTED_TOOLS.length} tools`);
+    } else {
+      console.log(`Upgraded PreToolUse hooks: added ${missingTools.join(", ")}`);
+    }
   } else {
-    console.log("PreToolUse hook already registered");
+    console.log("PreToolUse hooks already registered for all tools");
   }
 
   // Register SessionEnd hook for auto-learning
