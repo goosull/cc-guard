@@ -1,19 +1,51 @@
 {
   "name": "cc-guard",
   "version": "0.3.0",
-  "description": "Adaptive permission hook for Claude Code — regex-based deny/allow with session learning",
+  "description": "Permission guard for Claude Code — block dangerous commands with regex, allow everything else. Zero prompts.",
   "type": "module",
   "bin": {
-    "cc-guard": "./dist/cc-guard"
+    "cc-guard": "./bin/cc-guard.js"
   },
+  "files": [
+    "bin/",
+    "src/",
+    "rules/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "bun build src/cli.ts --compile --outfile dist/cc-guard",
     "test": "bun test",
-    "dev": "bun run src/cli.ts"
+    "dev": "bun run src/cli.ts",
+    "postinstall": "echo '[cc-guard] Installed. Run: cc-guard init'"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.89.0",
     "yaml": "^2.7.0"
   },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/goosull/cc-guard.git"
+  },
+  "homepage": "https://github.com/goosull/cc-guard#readme",
+  "bugs": {
+    "url": "https://github.com/goosull/cc-guard/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "claude",
+    "anthropic",
+    "permission",
+    "guard",
+    "hook",
+    "pretooluse",
+    "cli",
+    "security",
+    "regex"
+  ],
+  "author": "goosull",
   "license": "MIT"
 }
