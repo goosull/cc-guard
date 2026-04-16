@@ -66,8 +66,94 @@ export function buildStats(decisions: Decision[]) {
   };
 }
 
-export function buildPrompt(decisions: Decision[], currentRulesYaml: string, stats: ReturnType<typeof buildStats>): string {
-  const sample = decisions.slice(0, 100);
+/**
+ * Strategic sampling: instead of just taking the first 100 decisions,
+ * sample across time periods with frequency-weighted representation.
+ *
+ * Strategy:
+ * 1. All denied decisions (always interesting, usually few)
+ * 2. Time-stratified sample of default-allowed decisions (most interesting for new rules)
+ * 3. Fill remaining budget with allowed decisions for context
+ *
+ * @param maxSample - maximum number of decisions to include (default 200)
+ */
+export function sampleDecisions(decisions: Decision[], maxSample: number = 200): Decision[] {
+  if (decisions.length <= maxSample) return decisions;
+
+  const denied = decisions.filter(d => d.decision === "deny");
+  const defaultAllowed = decisions.filter(d => d.decision === "default-allow");
+  const allowed = decisions.filter(d => d.decision === "allow");
+
+  const result: Decision[] = [];
+
+  // 1. All denied decisions (cap at 30% of budget)
+  const deniedBudget = Math.min(denied.length, Math.floor(maxSample * 0.3));
+  result.push(...denied.slice(0, deniedBudget));
+
+  // 2. Time-stratified default-allowed (50% of budget)
+  const defaultBudget = Math.min(defaultAllowed.length, Math.floor(maxSample * 0.5));
+  if (defaultAllowed.length > 0 && defaultBudget > 0) {
+    result.push(...stratifiedSample(defaultAllowed, defaultBudget));
+  }
+
+  // 3. Fill remaining with allowed decisions
+  const remaining = maxSample - result.length;
+  if (remaining > 0 && allowed.length > 0) {
+    result.push(...stratifiedSample(allowed, Math.min(remaining, allowed.length)));
+  }
+
+  return result;
+}
+
+/**
+ * Take a time-stratified sample: divide decisions into time buckets
+ * and sample equally from each bucket, ensuring even temporal coverage.
+ */
+function stratifiedSample(decisions: Decision[], count: number): Decision[] {
+  if (decisions.length <= count) return decisions;
+
+  // Group by date
+  const byDate = new Map<string, Decision[]>();
+  for (const d of decisions) {
+    const date = d.ts.slice(0, 10);
+    const group = byDate.get(date) ?? [];
+    group.push(d);
+    byDate.set(date, group);
+  }
+
+  const dates = [...byDate.keys()].sort();
+  const perBucket = Math.max(1, Math.floor(count / dates.length));
+  const result: Decision[] = [];
+
+  for (const date of dates) {
+    const bucket = byDate.get(date)!;
+    // Take evenly spaced items from each bucket
+    const take = Math.min(perBucket, bucket.length);
+    const step = bucket.length / take;
+    for (let i = 0; i < take && result.length < count; i++) {
+      result.push(bucket[Math.floor(i * step)]);
+    }
+  }
+
+  // If we still have room (uneven distribution), fill from largest buckets
+  if (result.length < count) {
+    const seen = new Set(result);
+    for (const date of dates) {
+      for (const d of byDate.get(date)!) {
+        if (result.length >= count) break;
+        if (!seen.has(d)) {
+          result.push(d);
+          seen.add(d);
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+export function buildPrompt(decisions: Decision[], currentRulesYaml: string, stats: ReturnType<typeof buildStats>, fullMode: boolean = false): string {
+  const sample = fullMode ? decisions : sampleDecisions(decisions);
 
   return `You are analyzing Claude Code permission decisions to suggest rule improvements for cc-guard, a regex-based permission guard.
 
@@ -86,7 +172,7 @@ ${currentRulesYaml}
 ## Most Frequent Default-Allowed Commands (no rule matched)
 ${stats.topPrefixes.map(([prefix, count]) => `- "${prefix}" — ${count} times`).join("\n")}
 
-## Recent Decisions (sample)
+## Decisions (${sample.length} of ${stats.total}, stratified by time + decision type)
 ${sample.map((d) => `${d.decision.padEnd(14)} | ${d.source.padEnd(7)} | ${d.tool}: ${d.input.slice(0, 100)}`).join("\n")}
 
 ## Your Task
@@ -177,6 +263,7 @@ async function callLlm(prompt: string): Promise<string> {
 
 export async function cmdLearn(args: string[] = []): Promise<void> {
   const isAuto = args.includes("--auto");
+  const fullMode = args.includes("--full");
   const config = await loadConfig();
   const rules = await loadRules();
   const decisions = loadAllDecisions();
@@ -200,7 +287,14 @@ export async function cmdLearn(args: string[] = []): Promise<void> {
   }
 
   const rulesYaml = stringify(rules);
-  const prompt = buildPrompt(decisions, rulesYaml, stats);
+  const prompt = buildPrompt(decisions, rulesYaml, stats, fullMode);
+
+  if (!isAuto && fullMode) {
+    console.log(`  Full mode: including all ${decisions.length} decisions in prompt`);
+  } else if (!isAuto) {
+    const sampleSize = Math.min(decisions.length, 200);
+    console.log(`  Sampling: ${sampleSize} of ${decisions.length} decisions (use --full for all)`);
+  }
 
   if (!isAuto) console.log("\nCalling LLM for analysis...");
 

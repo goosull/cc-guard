@@ -41,7 +41,7 @@ Commands:
   status            Show current rules count and session statistics
   log [N]           Show last N decisions (default: 20)
   import [path]     Import rules from settings.local.json
-  learn             Analyze session logs with LLM and suggest rule changes
+  learn [--full]    Analyze session logs with LLM and suggest rule changes
   diff              Preview pending rule changes from learn
   apply             Apply pending rule changes to rules.yaml
   allow-once <pat>  Temporarily allow a denied pattern (1 use, 24h TTL)
