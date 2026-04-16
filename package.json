@@ -12,6 +12,7 @@
     "dev": "bun run src/cli.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.89.0",
     "yaml": "^2.7.0"
   },
   "license": "MIT"
