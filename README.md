@@ -58,16 +58,14 @@ cc-guard flips the model to a **blacklist**. Deny rules replace 96 allow entries
 ## Quick Start
 
 ```bash
-# Clone and build
+# Option A: npm install (requires Bun runtime)
+npm install -g cc-guard
+cc-guard init
+
+# Option B: Clone and build
 git clone https://github.com/goosull/cc-guard.git
 cd cc-guard && bun install && bun run build
-
-# Add to PATH (pick one)
-echo 'export PATH="$HOME/Documents/cc-guard/dist:$PATH"' >> ~/.zshrc
-# or
 ln -s ~/Documents/cc-guard/dist/cc-guard /usr/local/bin/cc-guard
-
-# Initialize — creates ~/.cc-guard/ and registers the PreToolUse hook
 cc-guard init
 
 # Verify
@@ -374,7 +372,7 @@ src/
 - [x] **LLM-powered rule learning** — `cc-guard learn` analyzes session logs to suggest rules (v0.2.0)
 - [x] **Rule validation** — Regex syntax check + deny/allow conflict detection (v0.2.0)
 - [ ] **All-tool support** — Extend beyond Bash to Read, Write, Edit, MCP tools
-- [ ] **npm publish** — `npm install -g cc-guard` one-liner install
+- [x] **npm publish** — `npm install -g cc-guard` one-liner install
 - [x] **Interactive deny** — Allow-once/allow-session for blocked commands
 
 ## Requirements
